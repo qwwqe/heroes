@@ -1,4 +1,7 @@
 /**
  * @todo stub
  */
-export type RepoErrorCode = "err.repo.unknown" | "err.repo.placeholder";
+export type RepoErrorCode =
+  | "err.repo.client"
+  | "err.repo.auth"
+  | "err.repo.unknown";

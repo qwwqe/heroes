@@ -12,10 +12,12 @@ export type RepoResult<T> = Promise<RepoSuccess<T> | RepoFailure>;
 /**
  * @todo 補充說明
  */
-export interface RepoSuccess<T> {
-  ok: true;
-  data: T;
-}
+export type RepoSuccess<T> = T extends void
+  ? { ok: true }
+  : {
+      ok: true;
+      data: T;
+    };
 
 /**
  * @todo 補充說明
