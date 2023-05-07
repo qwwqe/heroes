@@ -10,7 +10,7 @@ import { RepoErrorCode } from "./errors";
 export type RepoResult<T> = Promise<RepoSuccess<T> | RepoFailure>;
 
 /**
- * @todo: stub
+ * @todo 補充說明
  */
 export interface RepoSuccess<T> {
   ok: true;
@@ -18,7 +18,7 @@ export interface RepoSuccess<T> {
 }
 
 /**
- * @todo: stub
+ * @todo 補充說明
  */
 export interface RepoFailure {
   ok: false;
