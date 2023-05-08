@@ -4,4 +4,5 @@
 export type RepoErrorCode =
   | "err.repo.client"
   | "err.repo.auth"
-  | "err.repo.unknown";
+  | "err.repo.unknown"
+  | "err.repo.notfound";
