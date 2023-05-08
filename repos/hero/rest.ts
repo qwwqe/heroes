@@ -5,6 +5,7 @@ import Hero from "@models/hero";
 export interface RestHeroRepoOptions {
   host?: string;
   port?: string;
+  fetcher?: typeof fetch;
 }
 
 interface AuthRequestBody {
@@ -17,6 +18,8 @@ class RestHeroRepo implements HeroRepo {
 
   port = "80";
 
+  fetcher: typeof fetch = fetch;
+
   private get baseUrl(): URL {
     return new URL(`${this.host}:${this.port}`);
   }
@@ -28,9 +31,10 @@ class RestHeroRepo implements HeroRepo {
 
     this.host = options.host ?? this.host;
     this.port = options.port ?? this.port;
+    this.fetcher = options.fetcher ?? this.fetcher;
   }
 
-  private async authenticate(options: HeroAuthOptions): RepoResult<void> {
+  async authenticate(options: HeroAuthOptions): RepoResult<void> {
     const resource = new URL("auth", this.baseUrl);
     const body: AuthRequestBody = {
       name: options.name,
@@ -38,7 +42,7 @@ class RestHeroRepo implements HeroRepo {
     };
     const headers = new Headers({ "Content-Type": "application/json" });
 
-    const res = await fetch(resource, {
+    const res = await this.fetcher(resource, {
       method: "POST",
       body: JSON.stringify(body),
       headers,
