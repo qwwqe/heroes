@@ -100,17 +100,36 @@ class RestHeroRepo implements HeroRepo {
     const headers = new Headers({ "Content-Type": "application/json" });
 
     const res = await this.fetcher(resource, { method: "GET", headers });
+    const contentType = res.headers.get("content-type") || "";
 
-    if (res.status === 200) {
-      const content: HeroInfoResponseBody = await res.json();
-      return { ok: true, data: new Hero(content) };
+    const failureCode: RepoErrorCode =
+      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
+
+    if (
+      res.status === 200 &&
+      contentType.split(";").includes("application/json")
+    ) {
+      const rawResponseBody = await res.json();
+
+      if (
+        "id" in rawResponseBody &&
+        "name" in rawResponseBody &&
+        "image" in rawResponseBody &&
+        Object.getOwnPropertyNames(rawResponseBody).length === 3
+      ) {
+        const content: HeroInfoResponseBody = rawResponseBody;
+        return { ok: true, data: new Hero(content) };
+      }
+
+      console.warn("未知回應： ", rawResponseBody);
+
+      return { ok: false, code: failureCode, message: "未知錯誤" };
     }
 
-    const code: RepoErrorCode =
-      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
     const message = await res.text();
+    console.warn("未知回應：", message);
 
-    return { ok: false, code, message };
+    return { ok: false, code: failureCode, message: "未知錯誤" };
   }
 
   /**
@@ -122,25 +141,47 @@ class RestHeroRepo implements HeroRepo {
     const headers = new Headers({ "Content-Type": "application/json" });
 
     const res = await this.fetcher(resource, { method: "GET", headers });
+    const contentType = res.headers.get("content-type") || "";
 
-    if (res.status === 200) {
-      const content: HeroProfileResponseBody = await res.json();
-      return {
-        ok: true,
-        data: new Profile({
-          strength: content.str,
-          agility: content.agi,
-          intelligence: content.int,
-          luck: content.luk,
-        }),
-      };
+    const failureCode: RepoErrorCode =
+      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
+
+    if (
+      res.status === 200 &&
+      contentType.split(";").includes("application/json")
+    ) {
+      const rawResponseBody = await res.json();
+      console.log("raw profile:", rawResponseBody);
+
+      if (
+        "str" in rawResponseBody &&
+        "agi" in rawResponseBody &&
+        "int" in rawResponseBody &&
+        "luk" in rawResponseBody &&
+        Object.getOwnPropertyNames(rawResponseBody)
+      ) {
+        const content: HeroProfileResponseBody = rawResponseBody;
+
+        return {
+          ok: true,
+          data: new Profile({
+            strength: content.str,
+            agility: content.agi,
+            intelligence: content.int,
+            luck: content.luk,
+          }),
+        };
+      }
+
+      const message = await res.text();
+      console.warn("未知回應：", message);
+
+      return { ok: false, code: failureCode, message: "未知錯誤" };
     }
 
-    const code: RepoErrorCode =
-      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
     const message = await res.text();
 
-    return { ok: false, code, message };
+    return { ok: false, code: failureCode, message };
   }
 
   async getHero(id: string, options?: GetHeroOptions): RepoResult<Hero> {
