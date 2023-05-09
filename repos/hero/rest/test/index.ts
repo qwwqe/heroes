@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "assert";
-import RestHeroRepo from "../rest";
+import RestHeroRepo from "..";
 
 test("RestHeroRepo", async (t) => {
   /**

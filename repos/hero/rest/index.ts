@@ -1,5 +1,9 @@
 import { RepoResult } from "@repos/base";
-import HeroRepo, { GetHeroesOptions, GetHeroOptions, HeroAuthOptions } from ".";
+import HeroRepo, {
+  GetHeroesOptions,
+  GetHeroOptions,
+  HeroAuthOptions,
+} from "@repos/hero";
 import Hero from "@models/hero";
 import Profile from "@models/profile";
 import { RepoErrorCode } from "@repos/base/errors";
