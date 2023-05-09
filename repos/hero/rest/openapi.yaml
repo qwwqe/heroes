@@ -77,42 +77,9 @@ paths:
 components:
   schemas:
     HeroInfo:
-      type: object
-      properties:
-        id:
-          type: string
-          description: 英雄的ID
-        name:
-          type: string
-          description: 名子
-        image:
-          type: string
-          format: uri
-          description: 大頭照的連結
-      example:
-        id: "1"
-        name: Daredevil
-        image: http://i.annihil.us/u/prod/marvel/i/mg/6/90/537ba6d49472b/standard_xlarge.jpg
+      $ref: 'schemas/info_response.json'
     HeroStats:
-      type: object
-      properties:
-        str:
-          type: number
-          description: 力量值
-        agi:
-          type: number
-          description: 敏捷值
-        int:
-          type: number
-          description: 智力值
-        luk:
-          type: number
-          description: 運氣值
-      example:
-        str: 2
-        int: 7
-        agi: 9
-        luk: 7
+      $ref: 'schemas/profile_response.json'
     MysteryBackendError:
       type: object
       description: 後台時不時回傳的「200錯誤」，似乎和流量有關係

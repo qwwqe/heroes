@@ -19,5 +19,12 @@
     }
   },
   "additionalProperties": false,
-  "minProperties": 3
+  "minProperties": 3,
+  "examples": [
+    {
+      "id": "1",
+      "name": "Daredevil",
+      "image": "http://i.annihil.us/u/prod/marvel/i/mg/6/90/537ba6d49472b/standard_xlarge.jpg"
+    }
+  ]
 }

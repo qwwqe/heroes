@@ -22,5 +22,13 @@
     }
   },
   "additionalProperties": false,
-  "minProperties": 4
+  "minProperties": 4,
+  "examples": [
+    {
+      "str": 2,
+      "int": 7,
+      "agi": 9,
+      "luk": 7
+    }
+  ]
 }
