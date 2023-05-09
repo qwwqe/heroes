@@ -1,0 +1,126 @@
+openapi: 3.1.3
+info:
+  title: 英雄資料Heroku後台
+  summary: 英雄資料上游後台
+  description: 未整合的英雄資料上游後台
+  version: 0.0.1 # 確切版本未知
+servers:
+  - url: https://hahow-recruit.herokuapp.com
+    description: 小專案主機
+paths:
+  /heroes:
+    get:
+      summary: 多筆英雄基本資料
+      description: 取得多筆的英雄基本資料
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HeroInfo'
+  /heroes/{heroId}:
+    get:
+      summary: 英雄的基本資料
+      description: 取得英雄的基本資料
+      responses:
+        "200":
+          description: Possible Success
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HeroInfo'
+                  - $ref: '#/components/schemas/MysteryBackendError'
+
+  /heroes/{heroId}/profile:
+    get:
+      summary: 英雄的能力值
+      description: 取得英雄的能力值
+      responses:
+        "200":
+          description: Possible Success
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HeroStats'
+                  - $ref: '#/components/schemas/MysteryBackendError'
+  /auth:
+    post:
+      summary: 後台驗證
+      description: 於後台驗證一組密碼及用戶名稱
+      responses:
+        "200":
+          description: Success
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: OK
+        "400":
+          description: 格式錯誤
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Bad Request
+        "401":
+          description: 驗證失敗
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Unauthorized
+components:
+  schemas:
+    HeroInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 英雄的ID
+        name:
+          type: string
+          description: 名子
+        image:
+          type: string
+          format: uri
+          description: 大頭照的連結
+      example:
+        id: "1"
+        name: Daredevil
+        image: http://i.annihil.us/u/prod/marvel/i/mg/6/90/537ba6d49472b/standard_xlarge.jpg
+    HeroStats:
+      type: object
+      properties:
+        str:
+          type: number
+          description: 力量值
+        agi:
+          type: number
+          description: 敏捷值
+        int:
+          type: number
+          description: 智力值
+        luk:
+          type: number
+          description: 運氣值
+      example:
+        str: 2
+        int: 7
+        agi: 9
+        luk: 7
+    MysteryBackendError:
+      type: object
+      description: 後台時不時回傳的「200錯誤」，似乎和流量有關係
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+externalDocs:
+  url: https://github.com/hahow/hahow-recruit/blob/master/backend.md
+  description: 徵才小專案的git repo
