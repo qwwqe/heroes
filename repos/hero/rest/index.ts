@@ -6,7 +6,10 @@ import HeroRepo, {
 } from "@repos/hero";
 import Hero from "@models/hero";
 import Profile from "@models/profile";
-import { RepoErrorCode } from "@repos/base/errors";
+
+import validator from "@validator";
+import InfoResponseSchema from "./schemas/info_response.json";
+import ProfileResponseSchema from "./schemas/profile_response.json";
 
 export interface RestHeroRepoOptions {
   host?: string;
@@ -19,13 +22,13 @@ interface AuthRequestBody {
   password: string;
 }
 
-interface HeroInfoResponseBody {
+interface InfoResponse {
   id: string;
   name: string;
   image: string;
 }
 
-interface HeroProfileResponseBody {
+interface ProfileResponse {
   str: number;
   int: number;
   agi: number;
@@ -69,7 +72,7 @@ class RestHeroRepo implements HeroRepo {
       body: JSON.stringify(body),
       headers,
     });
-    const content = await res.text();
+    const content = await res.text().catch(() => "");
 
     switch (res.status) {
       case 200:
@@ -95,97 +98,86 @@ class RestHeroRepo implements HeroRepo {
     throw new Error("stub" + options);
   }
 
-  /**
-   * @todo 處理後台部份錯誤回200這件事
-   */
   async getHeroInfo(id: string): RepoResult<Hero> {
     const slug = encodeURIComponent(id);
     const resource = new URL(`heroes/${slug}`, this.baseUrl);
-    const headers = new Headers({ "Content-Type": "application/json" });
-
+    const headers = new Headers({
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    });
     const res = await this.fetcher(resource, { method: "GET", headers });
-    const contentType = res.headers.get("content-type") || "";
 
-    const failureCode: RepoErrorCode =
-      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
+    if (res.status !== 200) {
+      const message = await res.text().catch(() => "");
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        message
+      );
 
-    if (
-      res.status === 200 &&
-      contentType.split(";").includes("application/json")
-    ) {
-      const rawResponseBody = await res.json();
-
-      if (
-        "id" in rawResponseBody &&
-        "name" in rawResponseBody &&
-        "image" in rawResponseBody &&
-        Object.getOwnPropertyNames(rawResponseBody).length === 3
-      ) {
-        const content: HeroInfoResponseBody = rawResponseBody;
-        return { ok: true, data: new Hero(content) };
-      }
-
-      console.warn("未知回應： ", rawResponseBody);
-
-      return { ok: false, code: failureCode, message: "未知錯誤" };
+      return {
+        ok: false,
+        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        message: "未知錯誤",
+      };
     }
 
-    const message = await res.text();
-    console.warn("未知回應：", message);
+    const content = await res.json().catch(() => ({}));
+    const validate = validator<InfoResponse>(InfoResponseSchema);
 
-    return { ok: false, code: failureCode, message: "未知錯誤" };
+    if (!validate(content)) {
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        content
+      );
+      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+    }
+
+    return { ok: true, data: new Hero(content) };
   }
 
-  /**
-   * @todo 處理後台部份錯誤回200這件事
-   */
   async getHeroProfile(id: string): RepoResult<Profile> {
     const slug = encodeURIComponent(id);
     const resource = new URL(`heroes/${slug}/profile`, this.baseUrl);
-    const headers = new Headers({ "Content-Type": "application/json" });
-
+    const headers = new Headers({
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    });
     const res = await this.fetcher(resource, { method: "GET", headers });
-    const contentType = res.headers.get("content-type") || "";
 
-    const failureCode: RepoErrorCode =
-      res.status === 404 ? "err.repo.notfound" : "err.repo.unknown";
+    if (res.status !== 200) {
+      const message = await res.text().catch(() => "");
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        message
+      );
 
-    if (
-      res.status === 200 &&
-      contentType.split(";").includes("application/json")
-    ) {
-      const rawResponseBody = await res.json();
-      console.log("raw profile:", rawResponseBody);
-
-      if (
-        "str" in rawResponseBody &&
-        "agi" in rawResponseBody &&
-        "int" in rawResponseBody &&
-        "luk" in rawResponseBody &&
-        Object.getOwnPropertyNames(rawResponseBody)
-      ) {
-        const content: HeroProfileResponseBody = rawResponseBody;
-
-        return {
-          ok: true,
-          data: new Profile({
-            strength: content.str,
-            agility: content.agi,
-            intelligence: content.int,
-            luck: content.luk,
-          }),
-        };
-      }
-
-      const message = await res.text();
-      console.warn("未知回應：", message);
-
-      return { ok: false, code: failureCode, message: "未知錯誤" };
+      return {
+        ok: false,
+        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        message: "未知錯誤",
+      };
     }
 
-    const message = await res.text();
+    const content = await res.json().catch(() => ({}));
+    const validate = validator<ProfileResponse>(ProfileResponseSchema);
 
-    return { ok: false, code: failureCode, message };
+    if (!validate(content)) {
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        content
+      );
+      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+    }
+
+    return {
+      ok: true,
+      data: new Profile({
+        strength: content.str,
+        agility: content.agi,
+        intelligence: content.int,
+        luck: content.luk,
+      }),
+    };
   }
 
   async getHero(id: string, options?: GetHeroOptions): RepoResult<Hero> {

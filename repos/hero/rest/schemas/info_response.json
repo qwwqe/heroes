@@ -1,0 +1,23 @@
+{
+  "$id": "heroes.repos.hero.rest.hero_info",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Hero Info",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "英雄的ID"
+    },
+    "name": {
+      "type": "string",
+      "description": "名字"
+    },
+    "image": {
+      "type": "string",
+      "format": "uri",
+      "description": "大頭照的連結"
+    }
+  },
+  "additionalProperties": false,
+  "minProperties": 3
+}
