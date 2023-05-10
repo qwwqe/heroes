@@ -28,11 +28,9 @@ interface InfoResponse {
   name: string;
   image: string;
 }
-
 RegisterSchema<InfoResponse>(InfoResponseSchema);
 
 type BatchInfoResponse = InfoResponse[];
-
 RegisterSchema<BatchInfoResponse>(BatchInfoResponseSchema);
 
 interface ProfileResponse {
@@ -41,7 +39,6 @@ interface ProfileResponse {
   agi: number;
   luk: number;
 }
-
 RegisterSchema<ProfileResponse>(ProfileResponseSchema);
 
 class RestHeroRepo implements HeroRepo {
