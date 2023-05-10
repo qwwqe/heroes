@@ -7,8 +7,9 @@ import HeroRepo, {
 import Hero from "@models/hero";
 import Profile from "@models/profile";
 
-import validator from "@validator";
+import Validator, { RegisterSchema } from "@validator";
 import InfoResponseSchema from "./schemas/info_response.json";
+import BatchInfoResponseSchema from "./schemas/batch_info_response.json";
 import ProfileResponseSchema from "./schemas/profile_response.json";
 
 export interface RestHeroRepoOptions {
@@ -28,12 +29,20 @@ interface InfoResponse {
   image: string;
 }
 
+RegisterSchema<InfoResponse>(InfoResponseSchema);
+
+type BatchInfoResponse = InfoResponse[];
+
+RegisterSchema<BatchInfoResponse>(BatchInfoResponseSchema);
+
 interface ProfileResponse {
   str: number;
   int: number;
   agi: number;
   luk: number;
 }
+
+RegisterSchema<ProfileResponse>(ProfileResponseSchema);
 
 class RestHeroRepo implements HeroRepo {
   host = "";
@@ -94,8 +103,71 @@ class RestHeroRepo implements HeroRepo {
     return { ok: true };
   }
 
-  getHeroes(options?: GetHeroesOptions): RepoResult<Hero[]> {
-    throw new Error("stub" + options);
+  async getHeroesInfo(): RepoResult<Hero[]> {
+    const resource = new URL("heroes", this.baseUrl);
+    const headers = new Headers({
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    });
+    const res = await this.fetcher(resource, { method: "GET", headers });
+
+    if (res.status !== 200) {
+      const message = await res.text().catch(() => "");
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        message
+      );
+
+      return {
+        ok: false,
+        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        message: "未知錯誤",
+      };
+    }
+
+    const content = await res.json().catch(() => ({}));
+    const validate = Validator<BatchInfoResponse>(BatchInfoResponseSchema);
+
+    if (!validate(content)) {
+      console.warn(
+        `[${res.status}] 未知回應來自"${resource.toString()}": `,
+        content
+      );
+      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+    }
+
+    return { ok: true, data: content.map((ir) => new Hero(ir)) };
+  }
+
+  async getHeroes(options?: GetHeroesOptions): RepoResult<Hero[]> {
+    if (options?.detailed) {
+      const authResult = await this.authenticate(options.auth);
+
+      if (!authResult.ok) {
+        return authResult;
+      }
+    }
+
+    const heroInfoResult = await this.getHeroesInfo();
+
+    if (!heroInfoResult.ok || !options?.detailed) {
+      return heroInfoResult;
+    }
+
+    const heroes = heroInfoResult.data;
+
+    for (let i = 0; i < heroes.length; i++) {
+      const heroProfileResult = await this.getHeroProfile(heroes[i].id);
+
+      // TODO: 回207
+      if (!heroProfileResult.ok) {
+        return heroProfileResult;
+      }
+
+      heroes[i].profile = heroProfileResult.data;
+    }
+
+    return { ok: true, data: heroes };
   }
 
   async getHeroInfo(id: string): RepoResult<Hero> {
@@ -122,7 +194,7 @@ class RestHeroRepo implements HeroRepo {
     }
 
     const content = await res.json().catch(() => ({}));
-    const validate = validator<InfoResponse>(InfoResponseSchema);
+    const validate = Validator<InfoResponse>(InfoResponseSchema);
 
     if (!validate(content)) {
       console.warn(
@@ -159,7 +231,7 @@ class RestHeroRepo implements HeroRepo {
     }
 
     const content = await res.json().catch(() => ({}));
-    const validate = validator<ProfileResponse>(ProfileResponseSchema);
+    const validate = Validator<ProfileResponse>(ProfileResponseSchema);
 
     if (!validate(content)) {
       console.warn(
