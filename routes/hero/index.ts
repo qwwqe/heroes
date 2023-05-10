@@ -10,6 +10,10 @@ interface HeroRouterState {
   };
 }
 
+interface HeroRouterOptions {
+  repo: HeroRepo;
+}
+
 type RouterMiddleware = Router.IMiddleware<HeroRouterState, object>;
 
 /**
@@ -103,10 +107,10 @@ export const GetHeroRoute = (idParamName = "id"): RouterMiddleware => {
   };
 };
 
-const router = (repo: HeroRepo) => {
+const router = (options: HeroRouterOptions) => {
   const _router = new Router<HeroRouterState>({ prefix: "/heroes" });
 
-  _router.use(RepoMiddleware(repo));
+  _router.use(RepoMiddleware(options.repo));
 
   _router.use(AuthMiddleware());
 

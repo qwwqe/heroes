@@ -9,7 +9,7 @@ const heroRepo = new RestHeroRepo({
   port: "443",
 });
 
-const heroRouter = HeroRouter(heroRepo);
+const heroRouter = HeroRouter({ repo: heroRepo });
 
 koa.use(heroRouter.routes());
 
