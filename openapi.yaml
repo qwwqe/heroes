@@ -8,6 +8,9 @@ paths:
     get:
       summary: 多筆英雄基本資料
       description: 取得多筆的英雄基本資料
+      parameters:
+        - $ref: '#/components/parameters/NameHeader'
+        - $ref: '#/components/parameters/PasswordHeader'
       responses:
         "200":
           description: Success
@@ -21,6 +24,9 @@ paths:
     get:
       summary: 英雄的基本資料
       description: 取得英雄的基本資料
+      parameters:
+        - $ref: '#/components/parameters/NameHeader'
+        - $ref: '#/components/parameters/PasswordHeader'
       responses:
         "200":
           description: Success
@@ -50,6 +56,7 @@ components:
           description: 大頭照的連結
         profile:
           $ref: '#/components/schemas/HeroStats'
+          description: 基本能力值。請求需要帶有效的驗證標頭，伺服器才會回傳此欄位。
       additionalProperties: false
       required:
         - id
@@ -94,6 +101,19 @@ components:
         int: 7
         agi: 9
         luk: 7
+  parameters:
+    NameHeader:
+      name: Name
+      in: header
+      schema:
+        type: string
+      description: 用戶名稱。用於驗證詳細資料請求。
+    PasswordHeader:
+      name: Password
+      in: header
+      schema:
+        type: string
+      description: 用戶密碼。用於驗證詳細資料請求。
 externalDocs:
   url: https://github.com/qwwqe/heroes/blob/main/README.md
   description: 英雄資訊網的git repo
