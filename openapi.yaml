@@ -37,7 +37,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HeroRepoNotFound'
+                oneOf:
+                  - $ref: '#/components/schemas/HeroRepoNotFound'
+                  - $ref: '#/components/schemas/NotFound'
         "500":
           description: Unknown Error
           content:
@@ -77,7 +79,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HeroRepoNotFound'
+                oneOf:
+                  - $ref: '#/components/schemas/HeroRepoNotFound'
+                  - $ref: '#/components/schemas/NotFound'
         "500":
           description: Unknown Error
           content:
@@ -224,6 +228,21 @@ components:
         message:
           type: string
           example: 未知錯誤
+      required:
+        - code
+        - message
+      additionalProperties: false
+    NotFound:
+      title: Not Found
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.global.notfound
+        message:
+          type: string
+          example: 查無資料
       required:
         - code
         - message

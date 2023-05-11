@@ -5,7 +5,10 @@ import ErrorResponse from "@errors";
 
 const koa = new Koa();
 
-const globalErrorHandler: Parameters<typeof koa.use>[0] = async (ctx, next) => {
+/**
+ * 確保所有錯誤回應有明確結構的Middleware。
+ */
+const GlobalErrorHandler: Parameters<typeof koa.use>[0] = async (ctx, next) => {
   try {
     await next();
   } catch (err) {
@@ -16,7 +19,22 @@ const globalErrorHandler: Parameters<typeof koa.use>[0] = async (ctx, next) => {
   }
 };
 
-koa.use(globalErrorHandler);
+/**
+ * 改Koa預設404回應的Middleware。
+ */
+const Global404Handler: Parameters<typeof koa.use>[0] = async (ctx, next) => {
+  await next();
+
+  if (ctx.status === 404 && typeof ctx.body !== "object") {
+    ctx.body = {
+      code: "err.global.notfound",
+      message: "查無資料",
+    } as ErrorResponse;
+  }
+};
+
+koa.use(Global404Handler);
+koa.use(GlobalErrorHandler);
 
 const heroRepo = new RestHeroRepo({
   host: "https://hahow-recruit.herokuapp.com",

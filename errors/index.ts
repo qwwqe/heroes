@@ -1,5 +1,6 @@
 export type ErrorCode =
   | "err.global.unknown"
+  | "err.global.notfound"
   | "err.repo.hero.client"
   | "err.repo.hero.auth"
   | "err.repo.hero.unknown"
@@ -7,6 +8,7 @@ export type ErrorCode =
 
 export const ErrorMessage: { [C in ErrorCode]: string } = {
   "err.global.unknown": "未知錯誤",
+  "err.global.notfound": "未知錯誤",
   "err.repo.hero.auth": "驗證失敗",
   "err.repo.hero.client": "無效請求",
   "err.repo.hero.notfound": "查無資料",
