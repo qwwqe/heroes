@@ -58,6 +58,19 @@ const RestHeroRepoError = (status: number): Awaited<RepoFailure> => ({
 });
 
 /**
+ * TODO: 改用真正的logger套件
+ */
+const UnknownResponseLogger = (
+  status: string | number,
+  resource: string | URL,
+  message: string
+) => {
+  console.warn(
+    `[WARN] [${status}] 未知回應來自${resource.toString()}: ${message}`
+  );
+};
+
+/**
  * REST後台資料來源的HeroRepo實作。
  */
 class RestHeroRepo implements HeroRepo {
@@ -162,7 +175,7 @@ class RestHeroRepo implements HeroRepo {
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(`未知回應來自: ${message}`);
+      UnknownResponseLogger(res.status, resource, message);
       return RestHeroRepoError(res.status);
     }
 
@@ -170,10 +183,7 @@ class RestHeroRepo implements HeroRepo {
     const validate = Validator<BatchInfoResponse>(BatchInfoResponseSchema);
 
     if (!validate(content)) {
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        content
-      );
+      UnknownResponseLogger(res.status, resource, content);
       return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
@@ -253,7 +263,7 @@ class RestHeroRepo implements HeroRepo {
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(`未知回應來自: ${message}`);
+      UnknownResponseLogger(res.status, resource, message);
       return RestHeroRepoError(res.status);
     }
 
@@ -261,10 +271,7 @@ class RestHeroRepo implements HeroRepo {
     const validate = Validator<InfoResponse>(InfoResponseSchema);
 
     if (!validate(content)) {
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        content
-      );
+      UnknownResponseLogger(res.status, resource, content);
       return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
@@ -285,7 +292,7 @@ class RestHeroRepo implements HeroRepo {
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(`未知回應來自: ${message}`);
+      UnknownResponseLogger(res.status, resource, message);
       return RestHeroRepoError(res.status);
     }
 
@@ -293,10 +300,7 @@ class RestHeroRepo implements HeroRepo {
     const validate = Validator<ProfileResponse>(ProfileResponseSchema);
 
     if (!validate(content)) {
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        content
-      );
+      UnknownResponseLogger(res.status, resource, content);
       return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
