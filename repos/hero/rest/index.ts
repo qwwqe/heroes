@@ -1,4 +1,4 @@
-import { RepoResult } from "@repos/base";
+import { RepoFailure, RepoResult } from "@repos/base";
 import HeroRepo, {
   GetHeroesOptions,
   GetHeroOptions,
@@ -11,12 +11,15 @@ import Validator, { RegisterSchema } from "@validator";
 import InfoResponseSchema from "./schemas/info_response.json";
 import BatchInfoResponseSchema from "./schemas/batch_info_response.json";
 import ProfileResponseSchema from "./schemas/profile_response.json";
+import MysteryErrorSchema from "./schemas/mystery_error_response.json";
+
 import { Fetcher, ThrottledFetcher } from "./fetcher";
 
 export interface RestHeroRepoOptions {
   host?: string;
   port?: string;
   fetcher?: Fetcher;
+  mysteryErrorRetries?: number;
 }
 
 interface AuthRequestBody {
@@ -42,17 +45,52 @@ interface ProfileResponse {
 }
 RegisterSchema<ProfileResponse>(ProfileResponseSchema);
 
+type MysteryErrorResponse = {
+  code: 1000;
+  message: "Backend error";
+};
+RegisterSchema<MysteryErrorResponse>(MysteryErrorSchema);
+
+const RestHeroRepoError = (status: number): Awaited<RepoFailure> => ({
+  ok: false,
+  code: status === 404 ? "err.repo.hero.notfound" : "err.repo.hero.unknown",
+  message: "未知錯誤",
+});
+
+/**
+ * REST後台資料來源的HeroRepo實作。
+ */
 class RestHeroRepo implements HeroRepo {
+  /**
+   * 後台的主機名稱。
+   */
   host = "";
 
+  /**
+   * 後台的通訊埠。
+   */
   port = "80";
 
+  /**
+   * 負責獲取外部HTTP資源的實體。
+   */
   fetcher: Fetcher = new ThrottledFetcher();
 
+  /**
+   * 遇到後台{@link MysteryErrorResponse}時，該重試的次數。目前只用於{@link getHeroInfo}。
+   */
+  mysteryErrorRetries = 5;
+
+  /**
+   * 完整的外部網址。
+   */
   private get baseUrl(): URL {
     return new URL(`${this.host}:${this.port}`);
   }
 
+  /**
+   * {@link fetcher}.fetch的別名。
+   */
   private get fetch(): typeof fetch {
     return this.fetcher.fetch.bind(this.fetcher);
   }
@@ -68,7 +106,7 @@ class RestHeroRepo implements HeroRepo {
   }
 
   /**
-   * @todo 處理後台部份錯誤回200這件事
+   * 驗證於後台API。
    */
   async authenticate(options: HeroAuthOptions): RepoResult<void> {
     const resource = new URL("auth", this.baseUrl);
@@ -97,14 +135,23 @@ class RestHeroRepo implements HeroRepo {
     }
   }
 
+  /**
+   * 啟動repo。目前不執行任何操作。
+   */
   async open(): RepoResult<void> {
     return { ok: true };
   }
 
+  /**
+   * 關閉repo。目前不執行任何操作。
+   */
   async close(): RepoResult<void> {
     return { ok: true };
   }
 
+  /**
+   * 取得英雄的基本資料。回傳的Hero當中，profile屬性會是空的。
+   */
   async getHeroesInfo(): RepoResult<Hero[]> {
     const resource = new URL("heroes", this.baseUrl);
     const headers = new Headers({
@@ -115,19 +162,8 @@ class RestHeroRepo implements HeroRepo {
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        message
-      );
-
-      return {
-        ok: false,
-        code:
-          res.status === 404
-            ? "err.repo.hero.notfound"
-            : "err.repo.hero.unknown",
-        message: "未知錯誤",
-      };
+      console.warn(`未知回應來自: ${message}`);
+      return RestHeroRepoError(res.status);
     }
 
     const content = await res.json().catch(() => ({}));
@@ -144,6 +180,9 @@ class RestHeroRepo implements HeroRepo {
     return { ok: true, data: content.map((ir) => new Hero(ir)) };
   }
 
+  /**
+   * 取得多筆的英雄資料。
+   */
   async getHeroes(options?: GetHeroesOptions): RepoResult<Hero[]> {
     if (options?.detailed) {
       const authResult = await this.authenticate(options.auth);
@@ -161,7 +200,7 @@ class RestHeroRepo implements HeroRepo {
 
     const heroes = heroInfoResult.data;
     const heroPromises = heroes.map((h) => this.getHeroProfile(h.id));
-    const settledPromises = await Promise.all(heroPromises); // TODO: 抓error嗎？
+    const settledPromises = await Promise.all(heroPromises);
 
     for (let i = 0; i < settledPromises.length; i++) {
       const heroProfileResult = settledPromises[i];
@@ -176,6 +215,32 @@ class RestHeroRepo implements HeroRepo {
     return { ok: true, data: heroes };
   }
 
+  /**
+   * 遇到後台{@link MysteryErrorResponse}時，嘗試再次送出請求。目前只用於{@link getHeroInfo}。
+   */
+  private async fetchWithRetry(
+    ...args: Parameters<typeof this.fetch>
+  ): ReturnType<typeof this.fetch> {
+    let res = await this.fetch(...args);
+
+    const validateMystery = Validator<MysteryErrorResponse>(MysteryErrorSchema);
+
+    for (let i = 0; i < this.mysteryErrorRetries && res.status === 200; i++) {
+      const mysteryContent = await res.clone().json().catch();
+
+      if (!validateMystery(mysteryContent)) {
+        break;
+      }
+
+      res = await this.fetch(...args);
+    }
+
+    return res;
+  }
+
+  /**
+   * 取得英雄的基本資料。
+   */
   async getHeroInfo(id: string): RepoResult<Hero> {
     const slug = encodeURIComponent(id);
     const resource = new URL(`heroes/${slug}`, this.baseUrl);
@@ -183,26 +248,16 @@ class RestHeroRepo implements HeroRepo {
       "Content-Type": "application/json",
       Accept: "application/json",
     });
-    const res = await this.fetch(resource, { method: "GET", headers });
+
+    const res = await this.fetchWithRetry(resource, { method: "GET", headers });
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        message
-      );
-
-      return {
-        ok: false,
-        code:
-          res.status === 404
-            ? "err.repo.hero.notfound"
-            : "err.repo.hero.unknown",
-        message: "未知錯誤",
-      };
+      console.warn(`未知回應來自: ${message}`);
+      return RestHeroRepoError(res.status);
     }
 
-    const content = await res.json().catch(() => ({}));
+    const content = await res.json().catch();
     const validate = Validator<InfoResponse>(InfoResponseSchema);
 
     if (!validate(content)) {
@@ -216,6 +271,9 @@ class RestHeroRepo implements HeroRepo {
     return { ok: true, data: new Hero(content) };
   }
 
+  /**
+   * 取得英雄的能力值。
+   */
   async getHeroProfile(id: string): RepoResult<Profile> {
     const slug = encodeURIComponent(id);
     const resource = new URL(`heroes/${slug}/profile`, this.baseUrl);
@@ -227,22 +285,11 @@ class RestHeroRepo implements HeroRepo {
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
-      console.warn(
-        `[${res.status}] 未知回應來自"${resource.toString()}": `,
-        message
-      );
-
-      return {
-        ok: false,
-        code:
-          res.status === 404
-            ? "err.repo.hero.notfound"
-            : "err.repo.hero.unknown",
-        message: "未知錯誤",
-      };
+      console.warn(`未知回應來自: ${message}`);
+      return RestHeroRepoError(res.status);
     }
 
-    const content = await res.json().catch(() => ({}));
+    const content = await res.json().catch();
     const validate = Validator<ProfileResponse>(ProfileResponseSchema);
 
     if (!validate(content)) {
@@ -264,6 +311,9 @@ class RestHeroRepo implements HeroRepo {
     };
   }
 
+  /**
+   * 取得英雄資料。
+   */
   async getHero(id: string, options?: GetHeroOptions): RepoResult<Hero> {
     if (options?.detailed) {
       const authResult = await this.authenticate(options.auth);

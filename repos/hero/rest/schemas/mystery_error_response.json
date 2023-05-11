@@ -1,0 +1,24 @@
+{
+  "$id": "hero.rest.mystery_error",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mystery Error",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "number",
+      "enum": [ 1000 ]
+    },
+    "message": {
+      "type": "string",
+      "enum": [ "Backend error" ]
+    }
+  },
+  "additionalProperties": false,
+  "required": ["code", "message"],
+  "examples": [
+    {
+      "code": 1000,
+      "message": "Backend error"
+    }
+  ]
+}
