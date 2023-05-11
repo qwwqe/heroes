@@ -76,7 +76,7 @@ test("RestHeroRepo", async (t) => {
       });
 
       assert.ok(!r.ok);
-      assert.equal(r.code, "err.repo.auth");
+      assert.equal(r.code, "err.repo.hero.auth");
     });
 
     await t.test("unsuccessful with invalid request format", async () => {
@@ -107,7 +107,7 @@ test("RestHeroRepo", async (t) => {
       });
 
       assert.ok(!r.ok);
-      assert.equal(r.code, "err.repo.client");
+      assert.equal(r.code, "err.repo.hero.client");
     });
 
     await t.test("unsuccessful with unknown response", async () => {
@@ -138,7 +138,7 @@ test("RestHeroRepo", async (t) => {
       });
 
       assert.ok(!r.ok);
-      assert.equal(r.code, "err.repo.unknown");
+      assert.equal(r.code, "err.repo.hero.unknown");
     });
   });
 });
