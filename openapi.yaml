@@ -20,6 +20,32 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/HeroInfo'
+        "400":
+          description: Client Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoClientError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoUnauthorized'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoNotFound'
+        "500":
+          description: Unknown Error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HeroRepoUnknownError'
+                  - $ref: '#/components/schemas/UnknownError'
   /heroes/{heroId}:
     get:
       summary: 英雄的基本資料
@@ -34,6 +60,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HeroInfo'
+        "400":
+          description: Client Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoClientError'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoUnauthorized'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroRepoNotFound'
+        "500":
+          description: Unknown Error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/HeroRepoUnknownError'
+                  - $ref: '#/components/schemas/UnknownError'
 components:
   # 以下schemas和rest後台的schemas大致相同——兩者實際上可以直接匯入
   # 共用的schema來使用，會省時間也會減少誤值的可能性(也就是說，這樣做會比較DRY)。
@@ -101,6 +153,81 @@ components:
         int: 7
         agi: 9
         luk: 7
+    HeroRepoUnauthorized:
+      title: Unauthorized Response (Hero Repo)
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.repo.hero.auth
+        message:
+          type: string
+          example: 驗證失敗
+      required:
+        - code
+        - message
+      additionalProperties: false
+    HeroRepoClientError:
+      title: Client Error (Hero Repo)
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.repo.hero.client
+        message:
+          type: string
+          example: 無效請求
+      required:
+        - code
+        - message
+      additionalProperties: false
+    HeroRepoNotFound:
+      title: Not Found (Hero Repo)
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.repo.hero.notfound
+        message:
+          type: string
+          example: 查無資料
+      required:
+        - code
+        - message
+      additionalProperties: false
+    HeroRepoUnknownError:
+      title: Unknown Error (Hero Repo)
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.repo.hero.unknown
+        message:
+          type: string
+          example: 未知錯誤
+      required:
+        - code
+        - message
+      additionalProperties: false
+    UnknownError:
+      title: Unknown Error
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - error.global.unknown
+        message:
+          type: string
+          example: 未知錯誤
+      required:
+        - code
+        - message
+      additionalProperties: false
   parameters:
     NameHeader:
       name: Name
