@@ -11,11 +11,12 @@ import Validator, { RegisterSchema } from "@validator";
 import InfoResponseSchema from "./schemas/info_response.json";
 import BatchInfoResponseSchema from "./schemas/batch_info_response.json";
 import ProfileResponseSchema from "./schemas/profile_response.json";
+import { Fetcher, ThrottledFetcher } from "./fetcher";
 
 export interface RestHeroRepoOptions {
   host?: string;
   port?: string;
-  fetcher?: typeof fetch;
+  fetcher?: Fetcher;
 }
 
 interface AuthRequestBody {
@@ -46,10 +47,14 @@ class RestHeroRepo implements HeroRepo {
 
   port = "80";
 
-  fetcher: typeof fetch = fetch;
+  fetcher: Fetcher = new ThrottledFetcher();
 
   private get baseUrl(): URL {
     return new URL(`${this.host}:${this.port}`);
+  }
+
+  private get fetch(): typeof fetch {
+    return this.fetcher.fetch.bind(this.fetcher);
   }
 
   constructor(options?: RestHeroRepoOptions) {
@@ -73,7 +78,7 @@ class RestHeroRepo implements HeroRepo {
     };
     const headers = new Headers({ "Content-Type": "application/json" });
 
-    const res = await this.fetcher(resource, {
+    const res = await this.fetch(resource, {
       method: "POST",
       body: JSON.stringify(body),
       headers,
@@ -84,11 +89,11 @@ class RestHeroRepo implements HeroRepo {
       case 200:
         return { ok: true };
       case 400:
-        return { ok: false, code: "err.repo.client", message: content };
+        return { ok: false, code: "err.repo.hero.client", message: content };
       case 401:
-        return { ok: false, code: "err.repo.auth", message: content };
+        return { ok: false, code: "err.repo.hero.auth", message: content };
       default:
-        return { ok: false, code: "err.repo.unknown", message: content };
+        return { ok: false, code: "err.repo.hero.unknown", message: content };
     }
   }
 
@@ -106,7 +111,7 @@ class RestHeroRepo implements HeroRepo {
       "Content-Type": "application/json",
       Accept: "application/json",
     });
-    const res = await this.fetcher(resource, { method: "GET", headers });
+    const res = await this.fetch(resource, { method: "GET", headers });
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
@@ -117,7 +122,10 @@ class RestHeroRepo implements HeroRepo {
 
       return {
         ok: false,
-        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        code:
+          res.status === 404
+            ? "err.repo.hero.notfound"
+            : "err.repo.hero.unknown",
         message: "未知錯誤",
       };
     }
@@ -130,7 +138,7 @@ class RestHeroRepo implements HeroRepo {
         `[${res.status}] 未知回應來自"${resource.toString()}": `,
         content
       );
-      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+      return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
     return { ok: true, data: content.map((ir) => new Hero(ir)) };
@@ -152,11 +160,12 @@ class RestHeroRepo implements HeroRepo {
     }
 
     const heroes = heroInfoResult.data;
+    const heroPromises = heroes.map((h) => this.getHeroProfile(h.id));
+    const settledPromises = await Promise.all(heroPromises); // TODO: 抓error嗎？
 
-    for (let i = 0; i < heroes.length; i++) {
-      const heroProfileResult = await this.getHeroProfile(heroes[i].id);
+    for (let i = 0; i < settledPromises.length; i++) {
+      const heroProfileResult = settledPromises[i];
 
-      // TODO: 回207
       if (!heroProfileResult.ok) {
         return heroProfileResult;
       }
@@ -174,7 +183,7 @@ class RestHeroRepo implements HeroRepo {
       "Content-Type": "application/json",
       Accept: "application/json",
     });
-    const res = await this.fetcher(resource, { method: "GET", headers });
+    const res = await this.fetch(resource, { method: "GET", headers });
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
@@ -185,7 +194,10 @@ class RestHeroRepo implements HeroRepo {
 
       return {
         ok: false,
-        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        code:
+          res.status === 404
+            ? "err.repo.hero.notfound"
+            : "err.repo.hero.unknown",
         message: "未知錯誤",
       };
     }
@@ -198,7 +210,7 @@ class RestHeroRepo implements HeroRepo {
         `[${res.status}] 未知回應來自"${resource.toString()}": `,
         content
       );
-      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+      return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
     return { ok: true, data: new Hero(content) };
@@ -211,7 +223,7 @@ class RestHeroRepo implements HeroRepo {
       "Content-Type": "application/json",
       Accept: "application/json",
     });
-    const res = await this.fetcher(resource, { method: "GET", headers });
+    const res = await this.fetch(resource, { method: "GET", headers });
 
     if (res.status !== 200) {
       const message = await res.text().catch(() => "");
@@ -222,7 +234,10 @@ class RestHeroRepo implements HeroRepo {
 
       return {
         ok: false,
-        code: res.status === 404 ? "err.repo.notfound" : "err.repo.unknown",
+        code:
+          res.status === 404
+            ? "err.repo.hero.notfound"
+            : "err.repo.hero.unknown",
         message: "未知錯誤",
       };
     }
@@ -235,7 +250,7 @@ class RestHeroRepo implements HeroRepo {
         `[${res.status}] 未知回應來自"${resource.toString()}": `,
         content
       );
-      return { ok: false, code: "err.repo.unknown", message: "未知錯誤" };
+      return { ok: false, code: "err.repo.hero.unknown", message: "未知錯誤" };
     }
 
     return {
