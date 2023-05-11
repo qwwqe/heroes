@@ -1,8 +1,3 @@
-/**
- * @todo stub
- */
-export type RepoErrorCode =
-  | "err.repo.client"
-  | "err.repo.auth"
-  | "err.repo.unknown"
-  | "err.repo.notfound";
+import { ErrorCode } from "@errors";
+
+export type RepoErrorCode = Extract<ErrorCode, `err.repo.${string}`>;

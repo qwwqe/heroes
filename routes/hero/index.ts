@@ -1,6 +1,7 @@
 import HeroRepo from "@repos/hero";
 import Router from "koa-router";
-import { DetailedHeroResponse, HeroResponse } from "./responses";
+import { DetailedHeroResponse, ErrorResponse, HeroResponse } from "./responses";
+import { HeroRepoErrorCode } from "@repos/hero/errors";
 
 interface HeroRouterState {
   repo: HeroRepo;
@@ -8,12 +9,19 @@ interface HeroRouterState {
     name: string;
     password: string;
   };
+  error?: {
+    code: HeroRepoErrorCode;
+    message: string;
+  };
 }
 
 interface HeroRouterOptions {
   repo: HeroRepo;
 }
 
+/**
+ * Koa Router的Middlware別名。
+ */
 type RouterMiddleware = Router.IMiddleware<HeroRouterState, object>;
 
 /**
@@ -36,13 +44,46 @@ export const AuthMiddleware = (): RouterMiddleware => {
     const detailed = typeof name === "string" && typeof password === "string";
 
     if (detailed) {
-      ctx.state.auth = {
-        name: detailed ? name : "",
-        password: detailed ? password : "",
-      };
+      ctx.state.auth = { name, password };
     }
 
     await next();
+  };
+};
+
+/**
+ * 依照ctx.state.error處理預期內的錯誤。
+ */
+export const ErrorMiddleware = (): RouterMiddleware => {
+  return async (ctx, next) => {
+    if (!ctx.state.error) {
+      return await next();
+    }
+
+    const code = ctx.state.error.code;
+    ctx.body = new ErrorResponse(code);
+
+    switch (ctx.state.error.code) {
+      case "err.repo.hero.auth":
+        ctx.status = 401;
+        break;
+      case "err.repo.hero.client":
+        ctx.status = 400;
+        break;
+      case "err.repo.hero.notfound":
+        ctx.status = 404;
+        break;
+      case "err.repo.hero.unknown":
+        ctx.status = 500;
+        break;
+      default:
+        {
+          const exhaustive: never = ctx.state.error.code;
+          ctx.body = exhaustive;
+        }
+
+        ctx.status = 500;
+    }
   };
 };
 
@@ -67,9 +108,7 @@ export const GetHeroesRoute = (): RouterMiddleware => {
       return await next();
     }
 
-    // TODO: stub
-    ctx.status = 500;
-    ctx.body = "stub";
+    ctx.state.error = heroResult;
 
     await next();
   };
@@ -91,7 +130,7 @@ export const GetHeroRoute = (idParamName = "id"): RouterMiddleware => {
     const heroResult = await ctx.state.repo.getHero(id, options);
 
     if (heroResult.ok) {
-      const Representer = ctx.state.auth ? HeroResponse : DetailedHeroResponse;
+      const Representer = ctx.state.auth ? DetailedHeroResponse : HeroResponse;
 
       ctx.status = 200;
       ctx.body = new Representer(heroResult.data);
@@ -99,14 +138,15 @@ export const GetHeroRoute = (idParamName = "id"): RouterMiddleware => {
       return await next();
     }
 
-    // TODO: stub
-    ctx.status = 500;
-    ctx.body = "stub";
+    ctx.state.error = heroResult;
 
     await next();
   };
 };
 
+/**
+ * 英雄資料的路由器。
+ */
 const router = (options: HeroRouterOptions) => {
   const _router = new Router<HeroRouterState>({ prefix: "/heroes" });
 
@@ -117,6 +157,8 @@ const router = (options: HeroRouterOptions) => {
   _router.get("/", GetHeroesRoute());
 
   _router.get("/:id", GetHeroRoute("id"));
+
+  _router.use(ErrorMiddleware());
 
   return _router;
 };

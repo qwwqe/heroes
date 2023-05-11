@@ -1,5 +1,10 @@
+import { ErrorMessage } from "@errors";
 import Hero from "@models/hero";
+import { HeroRepoErrorCode } from "@repos/hero/errors";
 
+/**
+ * 基本英雄資料的回應結構。
+ */
 export class HeroResponse {
   hero: Hero;
 
@@ -16,6 +21,9 @@ export class HeroResponse {
   }
 }
 
+/**
+ * 詳細英雄資料的回應結構。
+ */
 export class DetailedHeroResponse extends HeroResponse {
   toJSON() {
     return {
@@ -26,6 +34,24 @@ export class DetailedHeroResponse extends HeroResponse {
         luk: this.hero.profile.luck,
         agi: this.hero.profile.agility,
       },
+    };
+  }
+}
+
+/**
+ * 英雄repo的錯誤回應結構。
+ */
+export class ErrorResponse {
+  code: HeroRepoErrorCode;
+
+  constructor(code: HeroRepoErrorCode) {
+    this.code = code;
+  }
+
+  toJSON() {
+    return {
+      message: ErrorMessage[this.code],
+      code: this.code,
     };
   }
 }
