@@ -1,9 +1,20 @@
 import test from "node:test";
 import assert from "assert";
-import { GetHeroRoute, GetHeroesRoute } from "..";
+import {
+  AuthMiddleware,
+  ErrorMiddleware,
+  GetHeroRoute,
+  GetHeroesRoute,
+  RepoMiddleware,
+} from "..";
 import Hero from "@models/hero";
-import { DetailedHeroResponse, HeroResponse } from "../responses";
+import {
+  DetailedHeroResponse,
+  ErrorResponse,
+  HeroResponse,
+} from "../responses";
 import { RepoFailure } from "@repos/base";
+import RestHeroRepo from "@repos/hero/rest";
 
 test("Hero Route", async (t) => {
   await t.test("GetHeroRoute", async (t) => {
@@ -214,5 +225,113 @@ test("Hero Route", async (t) => {
 
       assert.rejects(route(ctx, next));
     });
+  });
+
+  await t.test("RepoMiddleware", async (t) => {
+    await t.test("loads repo object into state", async () => {
+      const repo = new RestHeroRepo();
+      const m: any = RepoMiddleware(repo);
+      const ctx = { state: {} as any };
+
+      await m(ctx, () => undefined);
+
+      assert.equal(ctx.state.repo, repo);
+    });
+  });
+
+  await t.test("AuthMiddleware", async (t) => {
+    await t.test(
+      "loads auth object into state if both name and password headers are provided",
+      async () => {
+        const m: any = AuthMiddleware();
+        const ctx = {
+          header: { name: "foo", password: "bar" },
+          state: {} as any,
+        };
+
+        await m(ctx, () => undefined);
+
+        assert.deepStrictEqual(ctx.state.auth, {
+          name: "foo",
+          password: "bar",
+        });
+      }
+    );
+
+    await t.test(
+      "does not load auth object into state if name or password headers are missing",
+      async () => {
+        const m: any = AuthMiddleware();
+        const headers = [
+          { name: "foo", bar: "bar" },
+          { foo: "foo", password: "bar" },
+          {},
+        ];
+
+        for (let i = 0; i < headers.length; i++) {
+          const ctx = { header: headers[i], state: {} as any };
+
+          await m(ctx, () => undefined);
+
+          assert.ok(!ctx.state.auth);
+        }
+      }
+    );
+
+    await t.test(
+      "does not load auth object into state if name or password headers are of incorrect type",
+      async () => {
+        const m: any = AuthMiddleware();
+        const headers = [
+          { name: 1, password: "bar" },
+          { foo: "foo", password: 1 },
+          { foo: ["foo"], password: undefined },
+        ];
+
+        for (let i = 0; i < headers.length; i++) {
+          const ctx = { header: headers[i], state: {} as any };
+
+          await m(ctx, () => undefined);
+
+          assert.ok(!ctx.state.auth);
+        }
+      }
+    );
+  });
+
+  await t.test("ErrorMiddleware", async (t) => {
+    await t.test(
+      "sets status and body correctly when error is present in state",
+      async () => {
+        const m: any = ErrorMiddleware();
+        const codeLookup = [
+          ["err.repo.hero.auth", 401],
+          ["err.repo.hero.client", 400],
+          ["err.repo.hero.notfound", 404],
+          ["err.repo.hero.unknown", 500],
+        ];
+
+        for (let i = 0; i < codeLookup.length; i++) {
+          const ctx: any = { state: { error: { code: codeLookup[i][0] } } };
+          await m(ctx, () => undefined);
+          assert.equal(ctx.status, codeLookup[i][1]);
+          assert.ok(ctx.body instanceof ErrorResponse);
+          assert.equal(ctx.body.code, codeLookup[i][0]);
+        }
+      }
+    );
+
+    await t.test(
+      "does not change status or body when no error is present",
+      async () => {
+        const m: any = ErrorMiddleware();
+        const ctx: any = { status: 200, body: "foo", state: {} };
+
+        await m(ctx, () => undefined);
+
+        assert.equal(ctx.status, 200);
+        assert.equal(ctx.body, "foo");
+      }
+    );
   });
 });
