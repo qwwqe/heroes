@@ -10,7 +10,7 @@ import { RepoErrorCode } from "./errors";
 export type RepoResult<T> = Promise<RepoSuccess<T> | RepoFailure>;
 
 /**
- * @todo 補充說明
+ * Repo操作成功。
  */
 export type RepoSuccess<T> = T extends void
   ? { ok: true }
@@ -20,7 +20,7 @@ export type RepoSuccess<T> = T extends void
     };
 
 /**
- * @todo 補充說明
+ * Repo操作失敗。
  */
 export interface RepoFailure {
   ok: false;

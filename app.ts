@@ -35,6 +35,7 @@ const GlobalErrorHandler: Parameters<typeof koa.use>[0] = async (ctx, next) => {
       code: "err.global.unknown",
       message: "未知錯誤",
     } as ErrorResponse;
+    ctx.status = 500;
   }
 };
 
