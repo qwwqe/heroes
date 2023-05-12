@@ -60,6 +60,10 @@ $ docker run -p 8080:8080 heroes
 - tsc-alias
   - 用於ts編譯後的工具，將ts的匯入別名轉為相對應的js版本
 
+## 開發困難
+
+在開發的過程中，數一數二最麻煩的地方在於REST後台的不穩定以其不規則的回應格式（如時不時拋錯、錯誤回200、各個回應的Content-Type不一致等）。面對這類的問題，專案採取比較直接的方式來應對，例如替後台[完整規範其API](repos/hero/rest/openapi.yaml)並[針對不穩的endpoint直接retry](repos/hero/rest/index.ts#231)，或者[實作限流機制](repos/hero/rest/fetcher.ts)讓應用程式盡情的送出多個請求。
+
 ## TODO
 
 - [ ] 從設定檔及環境變數載入伺服器設定
